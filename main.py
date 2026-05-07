@@ -49,17 +49,15 @@ async def start(message: types.Message):
     keyboard.add(button)
 
     text = """
-╔══ 💎 TON PULSE ══╗
+💎 TON PULSE ALERTS
 
-🚀 Welcome to TON Pulse
+✅ Alerts Activated
 
-⚡ Live TON alerts
-📈 Market updates
-🔔 Instant price alerts
+⚡ Live TON price every 2 minutes
+📈 Real-time market updates
+🚀 Automatic notifications
 
-You will now receive alerts automatically.
-
-╚══════════════════╝
+Stay tuned.
 """
 
     await message.answer(
@@ -88,16 +86,13 @@ async def send_alert():
         current_price = await get_ton_price()
 
         text = f"""
-╔══ 💎 TON ALERT ══╗
+💎 TON LIVE UPDATE
 
-💵 Price: ${current_price:.2f}
+💵 Current Price: ${current_price:.2f}
 
-🟢 Live TON Update
-
-⚡ Market Active
-📈 Real Time Movement
-
-╚══════════════════╝
+⚡ Live market tracking
+📈 Updated every 2 minutes
+🚀 TON Pulse Alerts
 """
 
         # SEND TO USERS
@@ -115,8 +110,8 @@ async def send_alert():
 
                 await asyncio.sleep(0.05)
 
-            except:
-                pass
+            except Exception as e:
+                print(e)
 
         # SEND TO CHANNEL
         try:
@@ -138,7 +133,7 @@ scheduler = AsyncIOScheduler()
 scheduler.add_job(
     send_alert,
     "interval",
-    minutes=1
+    minutes=2
 )
 
 async def on_startup(dp):
