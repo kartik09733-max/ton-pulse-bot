@@ -11,6 +11,9 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(bot)
 
+# CHANNEL ID
+CHANNEL_ID = -1003885809066
+
 # DATABASE
 conn = sqlite3.connect("users.db")
 cursor = conn.cursor()
@@ -20,9 +23,8 @@ CREATE TABLE IF NOT EXISTS users (
     user_id INTEGER PRIMARY KEY
 )
 """)
-conn.commit()
 
-last_price = None
+conn.commit()
 
 # START COMMAND
 @dp.message_handler(commands=['start'])
@@ -47,7 +49,7 @@ async def start(message: types.Message):
     keyboard.add(button)
 
     text = """
-╔═══ 💎 TON PULSE ═══╗
+╔══ 💎 TON PULSE ══╗
 
 🚀 Welcome to TON Pulse
 
@@ -65,7 +67,7 @@ You will now receive alerts automatically.
         reply_markup=keyboard
     )
 
-# GET PRICE
+# GET TON PRICE
 async def get_ton_price():
 
     url = "https://api.coingecko.com/api/v3/simple/price?ids=the-open-network&vs_currencies=usd"
@@ -78,66 +80,54 @@ async def get_ton_price():
 
             return data["the-open-network"]["usd"]
 
-# CHECK PRICE
-async def check_price():
-
-    global last_price
+# SEND ALERT
+async def send_alert():
 
     try:
 
         current_price = await get_ton_price()
 
-        if last_price is None:
-            last_price = current_price
-            return
-
-        change_percent = (
-            (current_price - last_price)
-            / last_price
-        ) * 100
-
-        if abs(change_percent) >= 1:
-
-            if change_percent > 0:
-                emoji = "🟢"
-                trend = "Bullish"
-            else:
-                emoji = "🔴"
-                trend = "Bearish"
-
-            text = f"""
-╔═══ 💎 TON ALERT ═══╗
+        text = f"""
+╔══ 💎 TON ALERT ══╗
 
 💵 Price: ${current_price:.2f}
-📈 Change: {change_percent:.2f}%
 
-{emoji} Market:
-{trend}
+🟢 Live TON Update
 
-⚡ Live TON Movement
+⚡ Market Active
+📈 Real Time Movement
 
 ╚══════════════════╝
 """
 
-            cursor.execute("SELECT user_id FROM users")
+        # SEND TO USERS
+        cursor.execute("SELECT user_id FROM users")
+        users = cursor.fetchall()
 
-            users = cursor.fetchall()
+        for user in users:
 
-            for user in users:
+            try:
 
-                try:
+                await bot.send_message(
+                    user[0],
+                    text
+                )
 
-                    await bot.send_message(
-                        user[0],
-                        text
-                    )
+                await asyncio.sleep(0.05)
 
-                    await asyncio.sleep(0.05)
+            except:
+                pass
 
-                except:
-                    pass
+        # SEND TO CHANNEL
+        try:
 
-            last_price = current_price
+            await bot.send_message(
+                CHANNEL_ID,
+                text
+            )
+
+        except Exception as e:
+            print(e)
 
     except Exception as e:
         print(e)
@@ -146,7 +136,7 @@ async def check_price():
 scheduler = AsyncIOScheduler()
 
 scheduler.add_job(
-    check_price,
+    send_alert,
     "interval",
     minutes=1
 )
