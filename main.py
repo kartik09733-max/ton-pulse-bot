@@ -1,63 +1,41 @@
-import asyncio
-import sqlite3
 import aiohttp
+import asyncio
 import os
 
 from aiogram import Bot, Dispatcher, executor, types
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
+# BOT TOKEN FROM RAILWAY VARIABLES
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
+# BOT + DISPATCHER
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(bot)
 
-# CHANNEL ID
+# YOUR CHANNEL ID
 CHANNEL_ID = -1003885809066
 
-# DATABASE
-conn = sqlite3.connect("users.db")
-cursor = conn.cursor()
-
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS users (
-    user_id INTEGER PRIMARY KEY
-)
-""")
-
-conn.commit()
-
 # START COMMAND
-@dp.message_handler(commands=['start'])
+@dp.message_handler(commands=["start"])
 async def start(message: types.Message):
-
-    user_id = message.from_user.id
-
-    cursor.execute(
-        "INSERT OR IGNORE INTO users (user_id) VALUES (?)",
-        (user_id,)
-    )
-
-    conn.commit()
 
     keyboard = types.InlineKeyboardMarkup()
 
     button = types.InlineKeyboardButton(
-        "📈 Live Chart",
+        text="📈 Live TON Chart",
         url="https://www.tradingview.com/symbols/TONUSD/"
     )
 
     keyboard.add(button)
 
     text = """
-💎 TON PULSE ALERTS
+💎 TON PULSE
 
-✅ Alerts Activated
+✅ Live Alerts Activated
 
-⚡ Live TON price every 2 minutes
-📈 Real-time market updates
-🚀 Automatic notifications
-
-Stay tuned.
+⚡ Real-time TON updates
+📈 Professional market tracking
+🚀 Automatic price feed
 """
 
     await message.answer(
@@ -65,10 +43,10 @@ Stay tuned.
         reply_markup=keyboard
     )
 
-# GET TON PRICE
-async def get_ton_price():
+# GET TON PRICE DATA
+async def get_ton_data():
 
-    url = "https://api.coingecko.com/api/v3/simple/price?ids=the-open-network&vs_currencies=usd"
+    url = "https://api.coingecko.com/api/v3/coins/the-open-network"
 
     async with aiohttp.ClientSession() as session:
 
@@ -76,75 +54,66 @@ async def get_ton_price():
 
             data = await response.json()
 
-            return data["the-open-network"]["usd"]
+            price = data["market_data"]["current_price"]["usd"]
 
-# SEND ALERT
+            change = data["market_data"]["price_change_percentage_24h"]
+
+            return price, change
+
+# SEND ALERT TO CHANNEL
 async def send_alert():
 
     try:
 
-        current_price = await get_ton_price()
+        price, change = await get_ton_data()
+
+        if change >= 0:
+            sentiment = "🟢 Bullish Momentum"
+        else:
+            sentiment = "🔴 Bearish Pressure"
 
         text = f"""
-💎 TON LIVE UPDATE
+💎 TON PULSE
 
-💵 Current Price: ${current_price:.2f}
+💵 ${price:.2f}
+📈 {change:.2f}% Today
 
-⚡ Live market tracking
-📈 Updated every 2 minutes
-🚀 TON Pulse Alerts
+{sentiment}
+⚡ Live Market Feed
 """
 
-        # SEND TO USERS
-        cursor.execute("SELECT user_id FROM users")
-        users = cursor.fetchall()
+        await bot.send_message(
+            chat_id=CHANNEL_ID,
+            text=text
+        )
 
-        for user in users:
-
-            try:
-
-                await bot.send_message(
-                    user[0],
-                    text
-                )
-
-                await asyncio.sleep(0.05)
-
-            except Exception as e:
-                print(e)
-
-        # SEND TO CHANNEL
-        try:
-
-            await bot.send_message(
-                CHANNEL_ID,
-                text
-            )
-
-        except Exception as e:
-            print(e)
+        print("Alert Sent")
 
     except Exception as e:
-        print(e)
+
+        print("ERROR:", e)
 
 # SCHEDULER
 scheduler = AsyncIOScheduler()
 
 scheduler.add_job(
     send_alert,
-    "interval",
+    trigger="interval",
     minutes=2
 )
 
+# BOT STARTUP
 async def on_startup(dp):
 
     scheduler.start()
 
-    print("Bot Started")
+    print("Bot Started Successfully")
 
+# RUN BOT
 if __name__ == "__main__":
 
     executor.start_polling(
         dp,
-        on_startup=on_startup
+        on_startup=on_startup,
+        skip_updates=True
     )
