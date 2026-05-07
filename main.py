@@ -6,7 +6,7 @@ import os
 from aiogram import Bot, Dispatcher, executor, types
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
+BOT_TOKEN = os.getenv(8549879366:AAFCRza8hgacEyCaquKO8Ib72jNnRRukumo)
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher(bot)
